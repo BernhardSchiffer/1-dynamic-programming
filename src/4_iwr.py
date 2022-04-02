@@ -3,12 +3,37 @@
 # %%
 import numpy as np
 from librosa.feature import mfcc
+from librosa import load
+import os
 
 # TODO: read in files, compute MFCC, organize
 
+def loadSpeaker(speakerName: str, index: int, base_path =  "../res/recordings/"):    
+    mfccs = []
+    for digitLabel in range(0, 10):
+        path = os.path.join(base_path, f'{digitLabel}_{speakerName}_{index}.wav')
+        print(path)
+        signal, sr = load(path)
+        print(signal.shape)
+        #mfccs.append({"example": f'{speakerName}{digitLabel}', "observation": mfcc(y=signal, sr=sr)})   
+    return mfccs
+
+jackson = loadSpeaker(speakerName='jackson', index=1)
+george = loadSpeaker(speakerName='george', index=1)
+
 # %%
 def dtw(obs1: list, obs2: list, sim) -> float:
-    pass
+
+    l1, l2 = len(obs1), len(obs2)
+    D = np.full(shape=(l1 +1, l2 +1), fill_value=np.inf, dtype=float)
+    D[0,0] = 0
+
+    for i in range (1, l1 +1):
+        for j in range (1, l2 + 1):
+            cost = sim(obs1[i-1], obs2[j-1])
+            D[i,j] = cost + min(D[i-1,j], D[i,j-1], D[i-1,j-1])
+
+    return D[l1, l2]
 
 # %% [markdown]
 """
@@ -25,7 +50,12 @@ def recognize(obs: list, refs: dict) -> str:
     refs: dict of (classname, observations) as references
     returns classname where distance of observations is minumum
     """
-    pass
+    scores = []
+    for sample in refs:
+        score = dtw(obs, sample["observation"], lambda x,y: np.linalg.norm(x-y, ord=1))
+        scores.append({"example": sample["example"], "score": score })
+
+    return min(scores, key= lambda t: t["score"])["example"]
 
 # %% [markdown]
 """

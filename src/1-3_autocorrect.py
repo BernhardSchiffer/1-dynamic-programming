@@ -145,8 +145,51 @@ for w in examples[:]:
 def keyboardsim(s1: str, s2: str) -> float:
     pass
 
-def nw(s1: str, s2: str, d: float, sim) -> float:
-    pass
+def nw(s1: str, s2: str, d: float = 0, sim = keyboardsim) -> float:
+    get_values = lambda v: [vv[0] for vv in v]
+    operations = list()
+    scores = np.zeros((len(s1)+1, len(s2)+1))
+
+    scores[0,:] = [i*-1 for i in [*range(0,len(s2)+1)]]
+    scores[:,0] = [i*-1 for i in [*range(0,len(s1)+1)]]
+    
+    operations.append(['-'*int(-i) for i in scores[0,:]])
+    for row in scores[1:,:]:
+        operations.append(['-'*int(-i) for i in row])
+
+    for cidx in range(1,np.shape(scores)[0]):
+
+        for ridx in range(1,np.shape(scores)[1]):
+
+            c1 = s1[cidx-1]
+            c2 = s2[ridx-1]
+
+            deletion = (scores[cidx-1,ridx] - 1, operations[cidx-1][ridx] + '-')
+            insertion = (scores[cidx,ridx-1] - 1, operations[cidx][ridx-1] + '-')
+
+            if(c1 != c2):
+                substitution = (scores[cidx-1,ridx-1] - 1, operations[cidx-1][ridx-1] + '-')
+            else:
+                substitution = (scores[cidx-1,ridx-1] + 1, operations[cidx-1][ridx-1] + '+')
+
+            x = [deletion, insertion, substitution]
+            maximum = max(get_values(x))
+            minidx = get_values(x).index(maximum)
+            
+            scores[cidx,ridx] = maximum
+            operations[cidx][ridx] = x[minidx][1]
+
+    score = int(scores[-1,-1])
+    operations = operations[-1][-1]
+    
+    return (score, operations)
+    #return score
+
+assert nw('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC') == (12, '++-++++-+++++-++++')
+assert nw('kühler schrank', 'schüler krank') == (3, '--+-++++---++++')
+assert nw('the longest', 'longest day') == (-1, '----+++++++----')
+assert nw('nicht ausgeloggt', 'licht ausgenockt') == (8, '-++++++++++-+--+')
+assert nw('gurken schaben', 'schurkengaben') == (2, '---+++++----++++')
 
 # How does your suggest function behave with nw and a keyboard-aware similarity?
 
