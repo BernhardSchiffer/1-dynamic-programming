@@ -14,11 +14,11 @@ def loadSpeaker(speakerName: str, index: int, base_path =  "../res/recordings/")
         path = os.path.join(base_path, f'{digitLabel}_{speakerName}_{index}.wav')
         print(path)
         signal, sr = load(path)
-        print(signal.shape)
-        #mfccs.append({"example": f'{speakerName}{digitLabel}', "observation": mfcc(y=signal, sr=sr)})   
+        mfccs.append({"example": f'{speakerName}_{digitLabel}', "observation": mfcc(y=signal, sr=sr).T})   
     return mfccs
 
-jackson = loadSpeaker(speakerName='jackson', index=1)
+jackson1 = loadSpeaker(speakerName='jackson', index=1)
+jackson10 = loadSpeaker(speakerName='jackson', index=10)
 george = loadSpeaker(speakerName='george', index=1)
 
 # %%
@@ -57,6 +57,7 @@ def recognize(obs: list, refs: dict) -> str:
 
     return min(scores, key= lambda t: t["score"])["example"]
 
+recognize([jack['observation'] for jack in jackson1], jackson10)
 # %% [markdown]
 """
 # Experiment 2: speaker-dependent IWR

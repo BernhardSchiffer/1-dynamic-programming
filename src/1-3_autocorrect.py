@@ -142,8 +142,40 @@ for w in examples[:]:
 # %%
 # Assignment Pt. 3: Needleman-Wunsch
 
+from bs4 import BeautifulSoup
+import math 
+  
+# reading content
+file = open("../res/de.xml", "r")
+contents = file.read()
+  
+# parsing
+soup = BeautifulSoup(contents, 'xml')
+keys = soup.find_all('char')
+keyboard = {}
+# display content
+for key in keys:
+    k = {'value': key.string}
+    parent = key.parent
+    k['left'] = parent['left']
+    k['top'] = parent['top']
+    k['width'] = parent['width']
+    k['height'] = parent['height']
+    k['fingerIndex'] = parent['fingerIndex']
+    keyboard[k['value']] = k
+
+# space
+specialKeys = soup.find_all('specialKey')
+for key in specialKeys:
+    if key['type'] == 'space':
+        keyboard[' '] = {'left': key['left'], 'top': key['top'], 'width': key['width'], 'height': key['height']}
+
+print(keyboard[' '])
+
 def keyboardsim(s1: str, s2: str) -> float:
-    pass
+    key1 = keyboard[s1]
+    key2 = keyboard[s2]
+    return math.dist((int(key1['left']), int(key1['top'])), (int(key2['left']), int(key2['top'])))
 
 def nw(s1: str, s2: str, d: float = 0, sim = keyboardsim) -> float:
     get_values = lambda v: [vv[0] for vv in v]
@@ -168,7 +200,8 @@ def nw(s1: str, s2: str, d: float = 0, sim = keyboardsim) -> float:
             insertion = (scores[cidx,ridx-1] - 1, operations[cidx][ridx-1] + '-')
 
             if(c1 != c2):
-                substitution = (scores[cidx-1,ridx-1] - 1, operations[cidx-1][ridx-1] + '-')
+                cost = sim(c1, c2)
+                substitution = (scores[cidx-1,ridx-1] - cost, operations[cidx-1][ridx-1] + '-')
             else:
                 substitution = (scores[cidx-1,ridx-1] + 1, operations[cidx-1][ridx-1] + '+')
 
@@ -185,11 +218,17 @@ def nw(s1: str, s2: str, d: float = 0, sim = keyboardsim) -> float:
     return (score, operations)
     #return score
 
-assert nw('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC') == (12, '++-++++-+++++-++++')
-assert nw('kühler schrank', 'schüler krank') == (3, '--+-++++---++++')
-assert nw('the longest', 'longest day') == (-1, '----+++++++----')
-assert nw('nicht ausgeloggt', 'licht ausgenockt') == (8, '-++++++++++-+--+')
-assert nw('gurken schaben', 'schurkengaben') == (2, '---+++++----++++')
+assert nw('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC', sim=lambda x,y: 1) == (12, '++-++++-+++++-++++')
+assert nw('kühler schrank', 'schüler krank', sim=lambda x,y: 1) == (3, '--+-++++---++++')
+assert nw('the longest', 'longest day', sim=lambda x,y: 1) == (-1, '----+++++++----')
+assert nw('nicht ausgeloggt', 'licht ausgenockt', sim=lambda x,y: 1) == (8, '-++++++++++-+--+')
+assert nw('gurken schaben', 'schurkengaben', sim=lambda x,y: 1) == (2, '---+++++----++++')
+
+print(nw('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC'))
+print(nw('kühler schrank', 'schüler krank'))
+print(nw('the longest', 'longest day'))
+print(nw('nicht ausgeloggt', 'licht ausgenockt'))
+print(nw('gurken schaben', 'schurkengaben'))
 
 # How does your suggest function behave with nw and a keyboard-aware similarity?
 
