@@ -2,8 +2,8 @@
 
 # %%
 import numpy as np
+import librosa
 from librosa.feature import mfcc
-from librosa import load
 import os
 
 # TODO: read in files, compute MFCC, organize
@@ -13,7 +13,7 @@ def loadSpeaker(speakerName: str, index: int, base_path =  "../res/recordings/")
     for digitLabel in range(0, 10):
         path = os.path.join(base_path, f'{digitLabel}_{speakerName}_{index}.wav')
         print(path)
-        signal, sr = load(path)
+        signal, sr = librosa.load(path)
         mfccs.append({"example": f'{speakerName}_{digitLabel}', "observation": mfcc(y=signal, sr=sr).T})   
     return mfccs
 
@@ -57,15 +57,24 @@ def recognize(obs: list, refs: dict) -> str:
 
     return min(scores, key= lambda t: t["score"])["example"]
 
-recognize([jack['observation'] for jack in jackson1], jackson10)
 # %% [markdown]
 """
 # Experiment 2: speaker-dependent IWR
 
 From the same speaker, pick training and test recordings
+"""
+for i in range(10):
+    print(f'{i}: recognize -> {recognize(jackson10[i]["observation"], jackson1)}')
 
+# %% [markdown]
+"""
 # Experiment 3: speaker-independent IWR
 
 Select training/reference set from one speaker, test recordings from the other. 
 Can you compute Prec/Recall/F1?
 """
+
+for i in range(10):
+    print(f'{i}: recognize -> {recognize(jackson10[i]["observation"], george)}')
+
+# %%

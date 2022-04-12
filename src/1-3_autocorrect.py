@@ -3,10 +3,12 @@
 # %%
 # Assignment Pt. 1: Edit Distances
 import numpy as np
+from bs4 import BeautifulSoup
+import math 
 
 vocabulary_file = open('../res/count_1w.txt', 'r')
 lines = vocabulary_file.readlines()
-vocabulary = list()
+vocabulary = dict()
 word_count = 0
 # Strips the newline character
 for line in lines:
@@ -14,11 +16,10 @@ for line in lines:
     w = line.split('\t')
     word = {'word': w[0], 'count': w[1]}
     word_count = word_count + int(w[1])
-    vocabulary.append(word)
+    vocabulary[word['word']] = word
 
 print(len(vocabulary))
-print(vocabulary[0:5])
-
+print(list(vocabulary.values())[0:5])
 
 gem_doppel = [
     ("GCGTATGAGGCTAACGC", "GCTATGCGGCTATACGC"),
@@ -91,8 +92,7 @@ def levenshtein(s1: str, s2: str) -> (int, str):
     distance = int(distances[-1,-1])
     operations = operations[-1][-1]
 
-    #return (distance, operations)
-    return distance
+    return (distance, operations)
 
 assert levenshtein('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC') == (3, 'mmdmmmmsmmmmmimmmm')
 assert levenshtein('kühler schrank', 'schüler krank') == (6, 'ssmimmmmsddmmmm')
@@ -109,21 +109,19 @@ def suggest(w: str, dist, max_cand=5) -> list:
     max_cand: maximum of number of suggestions
 
     returns a list of tuples (word, dist, score) sorted by score and distance"""
-    suggestions = list()
-    for word in vocabulary[:]:
-        distance = dist(w, word['word'])
-        Pw = int(word['count'])/word_count
-        Pxw = distance
-        suggestions.append((word['word'], distance, Pw))
-        
-    def getScore(suggestion):
-        return suggestion[1]
 
-    suggestions.sort(key=getScore)
-    if (suggestions[0][1] == 0):
-        return suggestions[0]
-    else:
-        return suggestions[:max_cand]
+    if w in vocabulary:
+        Pw = math.log(int(vocabulary[w]['count'])/word_count)
+        return [(w, 0, Pw)]
+
+    suggestions = list()
+    for word in list(vocabulary.values())[:]:
+        distance, _ = dist(w, word['word'])
+        Pw = math.log(int(word['count'])/word_count)
+        suggestions.append((word['word'], distance, 0.5* math.log(1/distance) + Pw))
+
+    suggestions.sort(key=lambda s: s[1])
+    return suggestions[:max_cand]
 
 examples = [
     "pirates",    # in-voc
@@ -132,7 +130,7 @@ examples = [
 ]
 
 for w in examples[:]:
-    print(w, suggest(w, hamming, max_cand=3))
+    print(w, suggest(w, levenshtein, max_cand=3))
 
 # sample result; your scores may vary!
 # pirates [('pirates', 0, -11.408058827802126)]
@@ -141,9 +139,6 @@ for w in examples[:]:
 
 # %%
 # Assignment Pt. 3: Needleman-Wunsch
-
-from bs4 import BeautifulSoup
-import math 
   
 # reading content
 file = open("../res/de.xml", "r")
@@ -151,11 +146,13 @@ contents = file.read()
   
 # parsing
 soup = BeautifulSoup(contents, 'xml')
+# get characters
 keys = soup.find_all('char')
 keyboard = {}
 # display content
 for key in keys:
     k = {'value': key.string}
+    # get key of character
     parent = key.parent
     k['left'] = parent['left']
     k['top'] = parent['top']
@@ -164,18 +161,24 @@ for key in keys:
     k['fingerIndex'] = parent['fingerIndex']
     keyboard[k['value']] = k
 
-# space
+# get special keys
 specialKeys = soup.find_all('specialKey')
 for key in specialKeys:
     if key['type'] == 'space':
-        keyboard[' '] = {'left': key['left'], 'top': key['top'], 'width': key['width'], 'height': key['height']}
-
-print(keyboard[' '])
+        keyboard[' '] = {
+            'value': ' ',
+            'left': key['left'],
+            'top': key['top'],
+            'width': key['width'],
+            'height': key['height']
+        }
 
 def keyboardsim(s1: str, s2: str) -> float:
     key1 = keyboard[s1]
     key2 = keyboard[s2]
-    return math.dist((int(key1['left']), int(key1['top'])), (int(key2['left']), int(key2['top'])))
+    key1_pos = (int(key1['left']), int(key1['top']))
+    key2_pos = (int(key2['left']), int(key2['top']))
+    return math.dist(key1_pos, key2_pos)
 
 def nw(s1: str, s2: str, d: float = 0, sim = keyboardsim) -> float:
     get_values = lambda v: [vv[0] for vv in v]
@@ -224,12 +227,11 @@ assert nw('the longest', 'longest day', sim=lambda x,y: 1) == (-1, '----+++++++-
 assert nw('nicht ausgeloggt', 'licht ausgenockt', sim=lambda x,y: 1) == (8, '-++++++++++-+--+')
 assert nw('gurken schaben', 'schurkengaben', sim=lambda x,y: 1) == (2, '---+++++----++++')
 
+# How does your suggest function behave with nw and a keyboard-aware similarity?
 print(nw('GCGTATGAGGCTAACGC', 'GCTATGCGGCTATACGC'))
 print(nw('kühler schrank', 'schüler krank'))
 print(nw('the longest', 'longest day'))
 print(nw('nicht ausgeloggt', 'licht ausgenockt'))
 print(nw('gurken schaben', 'schurkengaben'))
-
-# How does your suggest function behave with nw and a keyboard-aware similarity?
 
 # %%
